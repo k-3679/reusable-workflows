@@ -1,0 +1,21 @@
+name: Lint C/C++
+description: Lint C/C++ files with cppcheck
+
+inputs:
+  path:
+    description: Directory to lint
+    required: false
+    default: "."
+
+runs:
+  using: composite
+  steps:
+    - name: Install cppcheck
+      shell: bash
+      run: sudo apt-get update && sudo apt-get install -y cppcheck
+
+    - name: Run cppcheck
+      shell: bash
+      env:
+        LINT_PATH: ${{ inputs.path }}
+      run: cppcheck --error-exitcode=1 --enable=warning,style,performance,portability "$LINT_PATH"

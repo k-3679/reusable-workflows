@@ -1,0 +1,412 @@
+name: Release Vita Launcher
+
+on:
+  workflow_call:
+    inputs:
+      bump-type:
+        description: "Version bump type (major, minor, or patch)"
+        required: true
+        type: string
+      branch:
+        description: "Branch this pipeline is allowed to run from and releases to"
+        required: false
+        type: string
+        default: "main"
+      working-directory:
+        description: "Directory containing the server files to release"
+        required: false
+        type: string
+        default: "public"
+      metadata-file:
+        description: "Path to the launcher metadata JSON file"
+        required: false
+        type: string
+        default: "launcher.json"
+      release-name-prefix:
+        description: "Prefix used for the release zip file name"
+        required: false
+        type: string
+        default: "rain-vita-launcher"
+      checksum-exclude:
+        description: "Glob (relative to working-directory) excluded from the release checksum"
+        required: false
+        type: string
+        default: ".eslintrc.json"
+      changelog-file:
+        description: "Path to a Keep a Changelog-formatted CHANGELOG.md (skipped if the file doesn't exist)"
+        required: false
+        type: string
+        default: "CHANGELOG.md"
+      fail-on-empty-changelog:
+        description: "Fail the release if the [Unreleased] changelog section has no entries"
+        required: false
+        type: boolean
+        default: false
+      linters:
+        description: 'JSON array of linters to run, e.g. ''["php","python","node"]'''
+        required: false
+        type: string
+        default: '["php", "python", "node"]'
+      php-path:
+        required: false
+        type: string
+        default: "."
+      python-path:
+        required: false
+        type: string
+        default: "."
+      eslint-config:
+        required: false
+        type: string
+        default: ".eslintrc.json"
+      eslint-glob:
+        required: false
+        type: string
+        default: "**/*.js"
+      security-severity:
+        description: "Comma-separated severities to include in the security scan"
+        required: false
+        type: string
+        default: "CRITICAL,HIGH,MEDIUM,LOW"
+      security-fail-threshold-percent:
+        description: "Fail the security scan if high/critical findings exceed this percentage of all findings"
+        required: false
+        type: string
+        default: "0"
+    outputs:
+      tag:
+        description: "The git tag created for this release"
+        value: ${{ jobs.release.outputs.tag }}
+      version:
+        description: "The new semantic version"
+        value: ${{ jobs.release.outputs.version }}
+      checksum:
+        description: "The checksum of the released files"
+        value: ${{ jobs.release.outputs.checksum }}
+      release:
+        description: "The filename of the packaged release asset"
+        value: ${{ jobs.release.outputs.release }}
+      page_url:
+        description: "The URL of the deployed GitHub Pages demo"
+        value: ${{ jobs.deploy-pages.outputs.page_url }}
+
+permissions:
+  contents: write
+  security-events: write
+  pages: write
+  id-token: write
+
+jobs:
+  guard:
+    name: Restrict release to ${{ inputs.branch }}
+    uses: ./.github/workflows/restrict-branch.yml
+    with:
+      branch: ${{ inputs.branch }}
+
+  lint:
+    name: Lint
+    needs: guard
+    uses: ./.github/workflows/lint.yml
+    with:
+      linters: ${{ inputs.linters }}
+      php-path: ${{ inputs.php-path }}
+      python-path: ${{ inputs.python-path }}
+      eslint-config: ${{ inputs.eslint-config }}
+      eslint-glob: ${{ inputs.eslint-glob }}
+
+  security:
+    name: Security scan
+    needs: guard
+    permissions:
+      contents: read
+      security-events: write
+    uses: ./.github/workflows/security-scan.yml
+    with:
+      ref: ${{ inputs.branch }}
+      severity: ${{ inputs.security-severity }}
+      fail-threshold-percent: ${{ inputs.security-fail-threshold-percent }}
+
+  release:
+    name: Bump version, tag & release
+    needs: [lint, security]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      WORKING_DIRECTORY: ${{ inputs.working-directory }}
+      METADATA_FILE: ${{ inputs.metadata-file }}
+      RELEASE_NAME_PREFIX: ${{ inputs.release-name-prefix }}
+      RELEASE_BRANCH: ${{ inputs.branch }}
+      CHANGELOG_FILE: ${{ inputs.changelog-file }}
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+      version: ${{ steps.bump.outputs.new_version }}
+      checksum: ${{ steps.checksum.outputs.checksum }}
+      release: ${{ steps.package.outputs.release }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.branch }}
+
+      - name: Validate bump type
+        env:
+          BUMP_TYPE: ${{ inputs.bump-type }}
+        run: |
+          case "$BUMP_TYPE" in
+            major|minor|patch) ;;
+            *)
+              echo "::error::Invalid bump-type '$BUMP_TYPE' (expected major, minor, or patch)"
+              exit 1
+              ;;
+          esac
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Compute release checksum
+        id: checksum
+        run: |
+          # checksum public files
+          echo "checksum=sha256:${{ hashFiles(format('{0}/**', inputs.working-directory), format('!{0}/{1}', inputs.working-directory, inputs.checksum-exclude)) }}" >> "$GITHUB_OUTPUT"
+
+      - name: Bump version
+        id: bump
+        env:
+          BUMP_TYPE: ${{ inputs.bump-type }}
+        run: |
+          current=$(jq -r '.version' "$METADATA_FILE")
+          IFS='.' read -r major minor patch <<< "$current"
+          case "$BUMP_TYPE" in
+            major) major=$((major + 1)); minor=0; patch=0 ;;
+            minor) minor=$((minor + 1)); patch=0 ;;
+            patch) patch=$((patch + 1)) ;;
+          esac
+          echo "new_version=$major.$minor.$patch" >> "$GITHUB_OUTPUT"
+
+      - name: Update project metadata
+        id: tag
+        env:
+          NEW_VERSION: ${{ steps.bump.outputs.new_version }}
+          NEW_CHECKSUM: ${{ steps.checksum.outputs.checksum }}
+        run: |
+          tag="v${NEW_VERSION}"
+          release_url="${{ github.server_url }}/${{ github.repository }}/releases/tag/${tag}"
+          release_date=$(date -u +%Y-%m-%d)
+          tmp=$(mktemp)
+          jq \
+            --arg version "$NEW_VERSION" \
+            --arg checksum "$NEW_CHECKSUM" \
+            --arg releaseDate "$release_date" \
+            --arg release "$release_url" \
+            '.version = $version | .checksum = $checksum | .releaseDate = $releaseDate | .release = $release' \
+            "$METADATA_FILE" > "$tmp"
+          mv "$tmp" "$METADATA_FILE"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "release_date=$release_date" >> "$GITHUB_OUTPUT"
+
+      - name: Update changelog
+        id: changelog
+        uses: ./.github/actions/update-changelog
+        with:
+          changelog-file: ${{ inputs.changelog-file }}
+          new-version: ${{ steps.bump.outputs.new_version }}
+          new-tag: ${{ steps.tag.outputs.tag }}
+          release-date: ${{ steps.tag.outputs.release_date }}
+          repo-url: ${{ github.server_url }}/${{ github.repository }}
+          fail-on-empty: ${{ inputs.fail-on-empty-changelog }}
+
+      - name: Package the project for release
+        id: package
+        env:
+          NEW_VERSION: ${{ steps.bump.outputs.new_version }}
+        run: |
+          release="${RELEASE_NAME_PREFIX}-v${NEW_VERSION}.zip"
+          public_archive="${WORKING_DIRECTORY}.zip"
+          git archive --format=zip --output="$public_archive" "HEAD:$WORKING_DIRECTORY"
+          # put server archive and its metadata in the final release package
+          zip -j "$release" "$public_archive" "$METADATA_FILE"
+          echo "release=$release" >> "$GITHUB_OUTPUT"
+
+      - name: Commit and push to ${{ inputs.branch }}
+        run: |
+          git add "$METADATA_FILE"
+          if [ "${{ steps.changelog.outputs.updated }}" == "true" ]; then
+            git add "$CHANGELOG_FILE"
+          fi
+          git commit -m "chore: release ${{ steps.tag.outputs.tag }}"
+          git push origin "$RELEASE_BRANCH"
+          echo "committed=true" >> "$GITHUB_ENV"
+
+      - name: Create and push tag
+        run: |
+          git tag "${{ steps.tag.outputs.tag }}"
+          git push origin "${{ steps.tag.outputs.tag }}"
+          echo "tagged=true" >> "$GITHUB_ENV"
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ steps.tag.outputs.tag }}" \
+            --title "${{ steps.tag.outputs.tag }}" \
+            --generate-notes \
+            "${{ steps.package.outputs.release }}"
+          echo "released=true" >> "$GITHUB_ENV"
+
+      - name: Rollback on failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set +e
+          echo "::warning::Release failed, rolling back changes made by this run"
+          rollback_failed=false
+
+          if [ "${{ env.released }}" == "true" ]; then
+            gh release delete "${{ steps.tag.outputs.tag }}" --yes
+            if [ $? -ne 0 ]; then
+              echo "::error::Failed to delete release ${{ steps.tag.outputs.tag }} - remove it manually"
+              rollback_failed=true
+            fi
+          fi
+
+          if [ "${{ env.tagged }}" == "true" ]; then
+            git push origin ":refs/tags/${{ steps.tag.outputs.tag }}"
+            if [ $? -ne 0 ]; then
+              echo "::error::Failed to delete remote tag ${{ steps.tag.outputs.tag }} - remove it manually"
+              rollback_failed=true
+            fi
+            git tag -d "${{ steps.tag.outputs.tag }}" || true
+          fi
+
+          if [ "${{ env.committed }}" == "true" ]; then
+            if git revert --no-edit HEAD; then
+              if ! git push origin "$RELEASE_BRANCH"; then
+                echo "::error::Reverted locally but failed to push the revert to $RELEASE_BRANCH, manual intervention required"
+                rollback_failed=true
+              fi
+            else
+              git revert --abort
+              echo "::error::git revert failed: the release commit on $RELEASE_BRANCH was not undone, manual intervention required"
+              rollback_failed=true
+            fi
+          fi
+
+          if [ "$rollback_failed" == "true" ]; then
+            echo "## ⚠️ Rollback incomplete" >> "$GITHUB_STEP_SUMMARY"
+            echo "One or more rollback steps failed. See the annotations above for details." >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+          echo "## ✅ Rollback completed" >> "$GITHUB_STEP_SUMMARY"
+          echo "All changes successfully rolled back." >> "$GITHUB_STEP_SUMMARY"
+
+  build-pages:
+    name: Build demo for GitHub Pages
+    needs: release
+    runs-on: ubuntu-latest
+    env:
+      WORKING_DIRECTORY: ${{ inputs.working-directory }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch }}
+
+      - name: Prepare public demo content
+        run: |
+          mkdir pages-demo
+          cp "$WORKING_DIRECTORY/index.html" pages-demo/
+          cp "$WORKING_DIRECTORY/robots.txt" pages-demo/
+          cp -r "$WORKING_DIRECTORY/launcher" pages-demo/launcher
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: pages-demo
+
+  deploy-pages:
+    name: Deploy demo to GitHub Pages
+    needs: build-pages
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    outputs:
+      page_url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+  summary:
+    name: Workflow summary
+    needs: [guard, lint, security, release, build-pages, deploy-pages]
+    if: always()
+    runs-on: ubuntu-latest
+    env:
+      GUARD_RESULT: ${{ needs.guard.result }}
+      LINT_RESULT: ${{ needs.lint.result }}
+      SECURITY_RESULT: ${{ needs.security.result }}
+      SECURITY_TOTAL: ${{ needs.security.outputs.total }}
+      SECURITY_HIGHCRIT: ${{ needs.security.outputs.highcrit }}
+      SECURITY_PERCENTAGE: ${{ needs.security.outputs.percentage }}
+      SECURITY_FAIL_THRESHOLD_PERCENT: ${{ inputs.security-fail-threshold-percent }}
+      RELEASE_RESULT: ${{ needs.release.result }}
+      RELEASE_VERSION: ${{ needs.release.outputs.version }}
+      RELEASE_TAG: ${{ needs.release.outputs.tag }}
+      RELEASE_CHECKSUM: ${{ needs.release.outputs.checksum }}
+      RELEASE_ARCHIVE: ${{ needs.release.outputs.release }}
+      PAGES_RESULT: ${{ needs.deploy-pages.result }}
+      PAGES_URL: ${{ needs.deploy-pages.outputs.page_url }}
+      REPO_URL: ${{ github.server_url }}/${{ github.repository }}
+      BUMP_TYPE: ${{ inputs.bump-type }}
+    steps:
+      - name: Build summary
+        run: |
+          badge() {
+            case "$1" in
+              success) echo "✅ Passed" ;;
+              skipped) echo "⏭️ Skipped" ;;
+              *)       echo "❌ Failed" ;;
+            esac
+          }
+
+          security_pct="N/A"
+          [ -n "$SECURITY_PERCENTAGE" ] && security_pct="${SECURITY_PERCENTAGE}%"
+
+          release_url="N/A"
+          [ -n "$RELEASE_TAG" ] && release_url="$REPO_URL/releases/tag/$RELEASE_TAG"
+
+          {
+            echo "# Release workflow summary"
+            echo ""
+            echo "Guard: $(badge "$GUARD_RESULT") · Lint: $(badge "$LINT_RESULT")"
+            echo ""
+            echo "## 🔒 Security - $(badge "$SECURITY_RESULT")"
+            echo "| Metric | Value |"
+            echo "|---|---|"
+            echo "| Total findings | ${SECURITY_TOTAL:-N/A} |"
+            echo "| High/Critical findings | ${SECURITY_HIGHCRIT:-N/A} |"
+            echo "| High/Critical percentage | $security_pct |"
+            echo "| Threshold | ${SECURITY_FAIL_THRESHOLD_PERCENT}% |"
+            echo "| Full report | [Security tab]($REPO_URL/security/code-scanning) |"
+            echo ""
+            echo "## 🚀 Release - $(badge "$RELEASE_RESULT")"
+            echo "| Field | Value |"
+            echo "|---|---|"
+            echo "| Bump type | \`${BUMP_TYPE:-N/A}\` |"
+            echo "| New version | \`${RELEASE_VERSION:-N/A}\` |"
+            echo "| Tag | \`${RELEASE_TAG:-N/A}\` |"
+            echo "| Fingerprint | \`${RELEASE_CHECKSUM:-N/A}\` |"
+            echo "| Release asset | \`${RELEASE_ARCHIVE:-N/A}\` |"
+            echo "| Release URL | $release_url |"
+            echo ""
+            echo "## 📄 GitHub Pages - $(badge "$PAGES_RESULT")"
+            echo "Live at: ${PAGES_URL:-N/A}"
+          } >> "$GITHUB_STEP_SUMMARY"

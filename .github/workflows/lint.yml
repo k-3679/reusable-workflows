@@ -1,0 +1,125 @@
+name: Lint
+
+on:
+  workflow_call:
+    inputs:
+      linters:
+        description: 'JSON array of linters to run, e.g. ''["php","python","node"]''. Supported: php, python, node, go, rust, c'
+        required: true
+        type: string
+      php-version:
+        required: false
+        type: string
+        default: "8.2"
+      php-path:
+        required: false
+        type: string
+        default: "."
+      python-version:
+        required: false
+        type: string
+        default: "3.12"
+      python-path:
+        required: false
+        type: string
+        default: "."
+      node-version:
+        required: false
+        type: string
+        default: "20"
+      eslint-config:
+        required: false
+        type: string
+        default: ".eslintrc.json"
+      eslint-glob:
+        required: false
+        type: string
+        default: "**/*.js"
+      go-version:
+        required: false
+        type: string
+        default: "stable"
+      go-path:
+        required: false
+        type: string
+        default: "."
+      rust-toolchain:
+        required: false
+        type: string
+        default: "stable"
+      rust-path:
+        required: false
+        type: string
+        default: "."
+      c-path:
+        required: false
+        type: string
+        default: "."
+
+jobs:
+  php:
+    name: Lint PHP
+    if: contains(fromJSON(inputs.linters), 'php')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # TODO: adjust owner/ref once reusable-workflows is pushed
+      - uses: OWNER/reusable-workflows/.github/actions/lint-php@main
+        with:
+          php-version: ${{ inputs.php-version }}
+          path: ${{ inputs.php-path }}
+
+  python:
+    name: Lint Python
+    if: contains(fromJSON(inputs.linters), 'python')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: OWNER/reusable-workflows/.github/actions/lint-python@main
+        with:
+          python-version: ${{ inputs.python-version }}
+          path: ${{ inputs.python-path }}
+
+  node:
+    name: Lint JavaScript
+    if: contains(fromJSON(inputs.linters), 'node')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: OWNER/reusable-workflows/.github/actions/lint-node@main
+        with:
+          node-version: ${{ inputs.node-version }}
+          eslint-config: ${{ inputs.eslint-config }}
+          glob: ${{ inputs.eslint-glob }}
+
+  go:
+    name: Lint Go
+    if: contains(fromJSON(inputs.linters), 'go')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: OWNER/reusable-workflows/.github/actions/lint-go@main
+        with:
+          go-version: ${{ inputs.go-version }}
+          path: ${{ inputs.go-path }}
+
+  rust:
+    name: Lint Rust
+    if: contains(fromJSON(inputs.linters), 'rust')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: OWNER/reusable-workflows/.github/actions/lint-rust@main
+        with:
+          toolchain: ${{ inputs.rust-toolchain }}
+          path: ${{ inputs.rust-path }}
+
+  c:
+    name: Lint C/C++
+    if: contains(fromJSON(inputs.linters), 'c')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: OWNER/reusable-workflows/.github/actions/lint-c@main
+        with:
+          path: ${{ inputs.c-path }}

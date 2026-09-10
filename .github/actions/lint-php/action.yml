@@ -1,0 +1,31 @@
+name: Lint PHP
+description: Lint PHP files with php -l
+
+inputs:
+  php-version:
+    description: PHP version to use
+    required: false
+    default: "8.2"
+  path:
+    description: Directory to search for .php files
+    required: false
+    default: "."
+
+runs:
+  using: composite
+  steps:
+    - name: Set up PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: ${{ inputs.php-version }}
+
+    - name: Lint PHP files
+      shell: bash
+      env:
+        LINT_PATH: ${{ inputs.path }}
+      run: |
+        status=0
+        while IFS= read -r -d '' file; do
+          php -l "$file" || status=1
+        done < <(find "$LINT_PATH" -name '*.php' -print0)
+        exit $status

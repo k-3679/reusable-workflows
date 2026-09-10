@@ -1,0 +1,88 @@
+name: Trivy security scan
+description: Run a Trivy filesystem scan, upload SARIF results to the Security tab, and fail if high/critical findings exceed a percentage threshold.
+
+inputs:
+  scan-ref:
+    description: Path to scan
+    required: false
+    default: "."
+  severity:
+    description: Comma-separated severities to include
+    required: false
+    default: "CRITICAL,HIGH,MEDIUM,LOW"
+  fail-threshold-percent:
+    description: Fail if high/critical findings exceed this percentage of all findings
+    required: false
+    default: "0"
+  sarif-file:
+    description: Output filename for the SARIF report
+    required: false
+    default: "trivy-report.sarif"
+  json-file:
+    description: Output filename for the JSON report
+    required: false
+    default: "trivy-report.json"
+
+outputs:
+  total:
+    description: Total number of findings
+    value: ${{ steps.threshold.outputs.total }}
+  highcrit:
+    description: Number of high/critical findings
+    value: ${{ steps.threshold.outputs.highcrit }}
+  percentage:
+    description: High/critical findings as a percentage of all findings
+    value: ${{ steps.threshold.outputs.percentage }}
+
+runs:
+  using: composite
+  steps:
+    - name: Run Trivy filesystem scan (SARIF for Security tab)
+      uses: aquasecurity/trivy-action@0.28.0
+      with:
+        scan-type: fs
+        scan-ref: ${{ inputs.scan-ref }}
+        format: sarif
+        output: ${{ inputs.sarif-file }}
+        severity: ${{ inputs.severity }}
+
+    - name: Upload SARIF to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: ${{ inputs.sarif-file }}
+
+    - name: Run Trivy filesystem scan (JSON for threshold check)
+      uses: aquasecurity/trivy-action@0.28.0
+      with:
+        scan-type: fs
+        scan-ref: ${{ inputs.scan-ref }}
+        format: json
+        output: ${{ inputs.json-file }}
+        severity: ${{ inputs.severity }}
+
+    - name: Enforce high/critical findings threshold
+      id: threshold
+      shell: bash
+      env:
+        JSON_FILE: ${{ inputs.json-file }}
+        FAIL_THRESHOLD_PERCENT: ${{ inputs.fail-threshold-percent }}
+      run: |
+        total=$(jq '[.Results[]?.Vulnerabilities[]?, .Results[]?.Secrets[]?, .Results[]?.Misconfigurations[]?] | length' "$JSON_FILE")
+        highcrit=$(jq '[.Results[]?.Vulnerabilities[]?, .Results[]?.Secrets[]?, .Results[]?.Misconfigurations[]?] | map(select(.Severity == "CRITICAL" or .Severity == "HIGH")) | length' "$JSON_FILE")
+
+        if [ "$total" -eq 0 ]; then
+          percentage="0.00"
+        else
+          percentage=$(awk "BEGIN { printf \"%.2f\", ($highcrit/$total)*100 }")
+        fi
+
+        echo "total=$total" >> "$GITHUB_OUTPUT"
+        echo "highcrit=$highcrit" >> "$GITHUB_OUTPUT"
+        echo "percentage=$percentage" >> "$GITHUB_OUTPUT"
+        echo "High/critical findings: $highcrit / $total ($percentage%, threshold: $FAIL_THRESHOLD_PERCENT%)"
+
+        exceeds=$(awk "BEGIN { print ($percentage > $FAIL_THRESHOLD_PERCENT) ? 1 : 0 }")
+        if [ "$exceeds" -eq 1 ]; then
+          echo "::error::High/critical findings are $percentage% of all findings, exceeding threshold of $FAIL_THRESHOLD_PERCENT%"
+          exit 1
+        fi

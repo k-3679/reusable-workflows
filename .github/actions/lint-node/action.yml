@@ -1,0 +1,33 @@
+name: Lint JavaScript
+description: Lint JavaScript files with ESLint
+
+inputs:
+  node-version:
+    description: Node.js version to use
+    required: false
+    default: "20"
+  eslint-config:
+    description: Path to the ESLint config file
+    required: false
+    default: ".eslintrc.json"
+  glob:
+    description: Glob pattern of files to lint
+    required: false
+    default: "**/*.js"
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+
+    - name: Lint JavaScript files
+      shell: bash
+      env:
+        ESLINT_CONFIG: ${{ inputs.eslint-config }}
+        ESLINT_GLOB: ${{ inputs.glob }}
+      run: |
+        npm install --no-save eslint@8
+        npx eslint --config "$ESLINT_CONFIG" "$ESLINT_GLOB"

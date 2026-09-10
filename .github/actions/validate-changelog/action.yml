@@ -1,0 +1,87 @@
+name: Validate changelog
+description: Fail unless the [Unreleased] section of a Keep a Changelog-formatted CHANGELOG.md was updated by this push
+
+inputs:
+  changelog-file:
+    description: Path to a Keep a Changelog-formatted CHANGELOG.md
+    required: false
+    default: "CHANGELOG.md"
+  base-sha:
+    description: Commit to diff against (e.g. github.event.before). Empty/all-zero falls back to merge-base with default-branch
+    required: false
+    default: ""
+  default-branch:
+    description: Branch to fall back to for merge-base when base-sha is unusable (new branch, force-push, etc.)
+    required: false
+    default: "main"
+
+runs:
+  using: composite
+  steps:
+    - name: Check Unreleased section was updated
+      shell: bash
+      env:
+        CHANGELOG_FILE: ${{ inputs.changelog-file }}
+        BASE_SHA: ${{ inputs.base-sha }}
+        DEFAULT_BRANCH: ${{ inputs.default-branch }}
+      run: |
+        if [ ! -f "$CHANGELOG_FILE" ]; then
+          echo "::error::$CHANGELOG_FILE not found"
+          exit 1
+        fi
+        
+        effective_base="$BASE_SHA"
+        if [ -z "$effective_base" ] || [ "$effective_base" = "0000000000000000000000000000000000000000" ]; then
+          effective_base=""
+        fi
+
+        if [ -n "$effective_base" ] && ! git cat-file -e "${effective_base}^{commit}" 2>/dev/null; then
+          echo "::warning::base commit $effective_base not found in history, falling back to merge-base with $DEFAULT_BRANCH"
+          effective_base=""
+        fi
+
+        if [ -z "$effective_base" ]; then
+          git fetch origin "$DEFAULT_BRANCH" --quiet 2>/dev/null || true
+          effective_base=$(git merge-base "origin/$DEFAULT_BRANCH" HEAD 2>/dev/null || true)
+        fi
+
+        EFFECTIVE_BASE_SHA="$effective_base" python3 - <<'PYEOF'
+        import os, re, subprocess, sys
+
+        changelog_file = os.environ["CHANGELOG_FILE"]
+        base_sha = os.environ.get("EFFECTIVE_BASE_SHA", "")
+
+        def extract_unreleased(text):
+            pattern = re.compile(r"## \[Unreleased\]\n(.*?)(?=\n## \[|\Z)", re.DOTALL)
+            match = pattern.search(text)
+            return match.group(1).strip("\n") if match else None
+
+        with open(changelog_file, "r", encoding="utf-8") as f:
+            head_content = f.read()
+
+        head_unreleased = extract_unreleased(head_content)
+        if head_unreleased is None:
+            print(f"::error::Could not find an '## [Unreleased]' section in {changelog_file}", file=sys.stderr)
+            sys.exit(1)
+
+        if not head_unreleased.strip():
+            print(f"::error::The [Unreleased] section in {changelog_file} is empty - add an entry describing your change", file=sys.stderr)
+            sys.exit(1)
+
+        base_unreleased = ""
+        if base_sha:
+            result = subprocess.run(
+                ["git", "show", f"{base_sha}:{changelog_file}"],
+                capture_output=True, text=True,
+            )
+            if result.returncode == 0:
+                base_unreleased = extract_unreleased(result.stdout) or ""
+
+        if head_unreleased.strip() == base_unreleased.strip():
+            print(
+                f"::error::The [Unreleased] section in {changelog_file} was not updated by this push "
+                "- add an entry describing your change",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        PYEOF

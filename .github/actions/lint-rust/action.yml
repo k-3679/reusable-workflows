@@ -1,0 +1,26 @@
+name: Lint Rust
+description: Lint Rust files with Clippy
+
+inputs:
+  toolchain:
+    description: Rust toolchain to use
+    required: false
+    default: "stable"
+  path:
+    description: Directory containing the Cargo project
+    required: false
+    default: "."
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        toolchain: ${{ inputs.toolchain }}
+        components: clippy
+
+    - name: Run Clippy
+      shell: bash
+      working-directory: ${{ inputs.path }}
+      run: cargo clippy --all-targets -- -D warnings

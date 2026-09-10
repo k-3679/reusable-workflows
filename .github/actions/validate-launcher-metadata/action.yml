@@ -1,0 +1,37 @@
+name: Validate launcher metadata
+description: Validate that the launcher metadata file is valid JSON with a semantic version
+
+inputs:
+  metadata-file:
+    description: Path to the launcher metadata JSON file
+    required: false
+    default: "launcher.json"
+
+runs:
+  using: composite
+  steps:
+    - name: Validate metadata JSON
+      shell: bash
+      env:
+        METADATA_FILE: ${{ inputs.metadata-file }}
+      run: |
+        if [ ! -f "$METADATA_FILE" ]; then
+          echo "::error::$METADATA_FILE not found"
+          exit 1
+        fi
+
+        if ! jq empty "$METADATA_FILE" 2>/tmp/jq_err; then
+          echo "::error::$METADATA_FILE is not valid JSON: $(cat /tmp/jq_err)"
+          exit 1
+        fi
+
+        version=$(jq -r '.version // empty' "$METADATA_FILE")
+        if [ -z "$version" ]; then
+          echo "::error::$METADATA_FILE is missing a \"version\" field"
+          exit 1
+        fi
+
+        if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          echo "::error::$METADATA_FILE has an invalid version '$version' (expected semantic version X.Y.Z)"
+          exit 1
+        fi

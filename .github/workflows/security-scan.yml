@@ -1,0 +1,60 @@
+name: Security scan
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: Git ref to check out and scan
+        required: false
+        type: string
+        default: ""
+      scan-ref:
+        description: Path to scan
+        required: false
+        type: string
+        default: "."
+      severity:
+        description: Comma-separated severities to include
+        required: false
+        type: string
+        default: "CRITICAL,HIGH,MEDIUM,LOW"
+      fail-threshold-percent:
+        description: Fail if high/critical findings exceed this percentage of all findings
+        required: false
+        type: string
+        default: "0"
+    outputs:
+      total:
+        description: Total number of findings
+        value: ${{ jobs.scan.outputs.total }}
+      highcrit:
+        description: Number of high/critical findings
+        value: ${{ jobs.scan.outputs.highcrit }}
+      percentage:
+        description: High/critical findings as a percentage of all findings
+        value: ${{ jobs.scan.outputs.percentage }}
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  scan:
+    name: Security scan
+    runs-on: ubuntu-latest
+    outputs:
+      total: ${{ steps.scan.outputs.total }}
+      highcrit: ${{ steps.scan.outputs.highcrit }}
+      percentage: ${{ steps.scan.outputs.percentage }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+          
+      - name: Run Trivy security scan
+        id: scan
+        uses: OWNER/reusable-workflows/.github/actions/trivy-security-scan@main
+        with:
+          scan-ref: ${{ inputs.scan-ref }}
+          severity: ${{ inputs.severity }}
+          fail-threshold-percent: ${{ inputs.fail-threshold-percent }}

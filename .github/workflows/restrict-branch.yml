@@ -1,0 +1,21 @@
+name: Restrict to branch
+
+on:
+  workflow_call:
+    inputs:
+      branch:
+        description: Branch this workflow is allowed to run from
+        required: false
+        type: string
+        default: main
+
+jobs:
+  guard:
+    name: Restrict to ${{ inputs.branch }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if not triggered from allowed branch
+        if: github.ref != format('refs/heads/{0}', inputs.branch)
+        run: |
+          echo "::error::This workflow can only be run from the ${{ inputs.branch }} branch."
+          exit 1

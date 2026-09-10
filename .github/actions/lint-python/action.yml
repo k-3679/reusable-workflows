@@ -1,0 +1,28 @@
+name: Lint Python
+description: Lint Python files with ruff
+
+inputs:
+  python-version:
+    description: Python version to use
+    required: false
+    default: "3.12"
+  path:
+    description: File or directory to lint
+    required: false
+    default: "."
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Lint Python files
+      shell: bash
+      env:
+        LINT_PATH: ${{ inputs.path }}
+      run: |
+        pip install ruff
+        ruff check "$LINT_PATH"
