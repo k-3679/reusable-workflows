@@ -21,3 +21,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Composite action `lint-rust`.
 - Composite action `trivy-security-scan`.
 - Composite action `update-changelog`.
+- Release and changelog badges in `README.md`.
+
+### Changed
+
+- Extracted the inline Python in `validate-changelog` and `update-changelog` composite actions into standalone `.py` scripts.
+- `release-vita-launcher.yml` rebases onto the latest `$RELEASE_BRANCH` (with autostash) before committing and pushing.

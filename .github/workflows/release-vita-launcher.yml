@@ -28,7 +28,7 @@ on:
         type: string
         default: "rain-vita-launcher"
       checksum-exclude:
-        description: "Glob (relative to working-directory) excluded from the release checksum"
+        description: "Glob excluded from the release checksum"
         required: false
         type: string
         default: ".eslintrc.json"
@@ -226,12 +226,14 @@ jobs:
           release="${RELEASE_NAME_PREFIX}-v${NEW_VERSION}.zip"
           public_archive="${WORKING_DIRECTORY}.zip"
           git archive --format=zip --output="$public_archive" "HEAD:$WORKING_DIRECTORY"
-          # put server archive and its metadata in the final release package
+          # put public archive and its metadata in the final release package
           zip -j "$release" "$public_archive" "$METADATA_FILE"
           echo "release=$release" >> "$GITHUB_OUTPUT"
 
       - name: Commit and push to ${{ inputs.branch }}
         run: |
+          git pull --rebase --autostash origin "$RELEASE_BRANCH"
+
           git add "$METADATA_FILE"
           if [ "${{ steps.changelog.outputs.updated }}" == "true" ]; then
             git add "$CHANGELOG_FILE"
@@ -321,6 +323,9 @@ jobs:
           cp "$WORKING_DIRECTORY/index.html" pages-demo/
           cp "$WORKING_DIRECTORY/robots.txt" pages-demo/
           cp -r "$WORKING_DIRECTORY/launcher" pages-demo/launcher
+          # Needed to display the current launcher version.
+          # TODO: wire launcher.json with served pages content
+          cp ./launcher.json pages-demo/
 
       - name: Setup Pages
         uses: actions/configure-pages@v5

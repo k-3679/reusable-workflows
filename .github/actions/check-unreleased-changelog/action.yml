@@ -1,0 +1,39 @@
+name: Check unreleased changelog
+description: Fails if the Keep a Changelog "Unreleased" section contains entries.
+
+inputs:
+  changelog-file:
+    description: Path to the changelog file to validate.
+    required: false
+    default: CHANGELOG.md
+  ref:
+    description: Git ref/SHA to read the changelog from.
+    required: false
+    default: HEAD
+
+runs:
+  using: composite
+  steps:
+    - name: Fail if [Unreleased] section is not empty
+      shell: bash
+      run: |
+        FILE="${{ inputs.changelog-file }}"
+        REF="${{ inputs.ref }}"
+
+        # Read the file as it exists at REF
+        CONTENTS=$(git show "$REF:$FILE" 2>/dev/null) || {
+          echo "::error::$FILE not found at $REF"
+          exit 1
+        }
+
+        # Body between the "## [Unreleased]" heading and the next heading.
+        SECTION=$(echo "$CONTENTS" | awk '/^## \[[Uu]nreleased\]/{flag=1; next} /^## \[/{flag=0} flag')
+        CONTENT=$(echo "$SECTION" | sed '/^[[:space:]]*$/d')
+
+        if [ -n "$CONTENT" ]; then
+          echo "::error::$FILE has unreleased changes at $REF."
+          echo "$CONTENT"
+          exit 1
+        fi
+
+        echo "Unreleased section is empty, OK to merge."
