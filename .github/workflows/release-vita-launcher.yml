@@ -99,14 +99,14 @@ permissions:
 jobs:
   guard:
     name: Restrict release to ${{ inputs.branch }}
-    uses: ./.github/workflows/restrict-branch.yml
+    uses: k-3679/reusable-workflows/.github/workflows/restrict-branch.yml@main
     with:
       branch: ${{ inputs.branch }}
 
   lint:
     name: Lint
     needs: guard
-    uses: ./.github/workflows/lint.yml
+    uses: k-3679/reusable-workflows/.github/workflows/lint.yml@main
     with:
       linters: ${{ inputs.linters }}
       php-path: ${{ inputs.php-path }}
@@ -120,7 +120,7 @@ jobs:
     permissions:
       contents: read
       security-events: write
-    uses: ./.github/workflows/security-scan.yml
+    uses: k-3679/reusable-workflows/.github/workflows/security-scan.yml@main
     with:
       ref: ${{ inputs.branch }}
       severity: ${{ inputs.security-severity }}

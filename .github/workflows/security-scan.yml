@@ -53,7 +53,7 @@ jobs:
           
       - name: Run Trivy security scan
         id: scan
-        uses: OWNER/reusable-workflows/.github/actions/trivy-security-scan@main
+        uses: k-3679/reusable-workflows/.github/actions/trivy-security-scan@main
         with:
           scan-ref: ${{ inputs.scan-ref }}
           severity: ${{ inputs.severity }}
