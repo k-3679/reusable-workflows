@@ -1,5 +1,5 @@
 name: Update changelog
-description: Move the Unreleased section of a Keep a Changelog-formatted CHANGELOG.md into a new version section and update the compare links
+description: Move the Unreleased section of a Keep a CHANGELOG.md into a new version section and update the compare links
 
 inputs:
   changelog-file:

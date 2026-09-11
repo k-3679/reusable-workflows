@@ -4,7 +4,7 @@ on:
   workflow_call:
     inputs:
       linters:
-        description: 'JSON array of linters to run, e.g. ''["php","python","node"]''. Supported: php, python, node, go, rust, c'
+        description: 'JSON array of linters to run. Supported: php, python, node, go, rust, c'
         required: true
         type: string
       php-version:
@@ -63,8 +63,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      # TODO: adjust owner/ref once reusable-workflows is pushed
-      - uses: OWNER/reusable-workflows/.github/actions/lint-php@main
+      - uses: k-3679/reusable-workflows/.github/actions/lint-php@main
         with:
           php-version: ${{ inputs.php-version }}
           path: ${{ inputs.php-path }}
@@ -75,7 +74,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: OWNER/reusable-workflows/.github/actions/lint-python@main
+      - uses: k-3679/reusable-workflows/.github/actions/lint-python@main
         with:
           python-version: ${{ inputs.python-version }}
           path: ${{ inputs.python-path }}
@@ -86,7 +85,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: OWNER/reusable-workflows/.github/actions/lint-node@main
+      - uses: k-3679/reusable-workflows/.github/actions/lint-node@main
         with:
           node-version: ${{ inputs.node-version }}
           eslint-config: ${{ inputs.eslint-config }}
@@ -98,7 +97,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: OWNER/reusable-workflows/.github/actions/lint-go@main
+      - uses: k-3679/reusable-workflows/.github/actions/lint-go@main
         with:
           go-version: ${{ inputs.go-version }}
           path: ${{ inputs.go-path }}
@@ -109,7 +108,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: OWNER/reusable-workflows/.github/actions/lint-rust@main
+      - uses: k-3679/reusable-workflows/.github/actions/lint-rust@main
         with:
           toolchain: ${{ inputs.rust-toolchain }}
           path: ${{ inputs.rust-path }}
@@ -120,6 +119,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: OWNER/reusable-workflows/.github/actions/lint-c@main
+      - uses: k-3679/reusable-workflows/.github/actions/lint-c@main
         with:
           path: ${{ inputs.c-path }}
