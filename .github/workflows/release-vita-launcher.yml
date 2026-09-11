@@ -92,6 +92,7 @@ on:
 
 permissions:
   contents: write
+  actions: read
   security-events: write
   pages: write
   id-token: write
@@ -119,6 +120,7 @@ jobs:
     needs: guard
     permissions:
       contents: read
+      actions: read
       security-events: write
     uses: k-3679/reusable-workflows/.github/workflows/security-scan.yml@main
     with:
