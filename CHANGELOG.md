@@ -36,3 +36,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Replaced placeholder `OWNER/reusable-workflows` action references with `k-3679/reusable-workflows` in `lint.yml` and `security-scan.yml`.
 - `release-vita-launcher.yml` now calls `restrict-branch.yml`, `lint.yml`, and `security-scan.yml` via `k-3679/reusable-workflows@main` instead of local relative paths.
+- `trivy-security-scan`: bumped `aquasecurity/trivy-action` from `0.28.0` (tag no longer exists upstream, broke every workflow run) to `v0.36.0`.
