@@ -58,6 +58,17 @@ runs:
       run: |
         trivy convert --format sarif --output "${{ inputs.sarif-file }}" "${{ inputs.json-file }}"
 
+    - name: Fix SARIF root path
+      shell: bash
+      env:
+        SARIF_FILE: ${{ inputs.sarif-file }}
+      run: |
+        tmp=$(mktemp)
+        jq --arg root "file://${GITHUB_WORKSPACE}/" \
+          '.runs[]?.originalUriBaseIds.ROOTPATH.uri = $root' \
+          "$SARIF_FILE" > "$tmp"
+        mv "$tmp" "$SARIF_FILE"
+
     - name: Upload filesystem SARIF to GitHub Security tab
       uses: github/codeql-action/upload-sarif@v4
       with:

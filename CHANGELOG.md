@@ -52,3 +52,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `trivy-security-scan`: authenticate Trivy DB downloads with `GITHUB_TOKEN` to avoid GHCR anonymous pull rate limits.
 - Renamed `security-scan.yml` to `trivy.yml` and updated the `release-vita-launcher.yml` reference to match.
 - `codeql.yml`: `matrix` was assigned directly from `fromJSON(inputs.languages)`, which required callers to pass a full `{"include": [...]}` matrix object; a plain JSON array failed with "A sequence was not expected". `languages` is now wrapped under `matrix.include` internally.
+- `trivy-security-scan`: `trivy convert` has no knowledge of the original scan directory, so it set the SARIF's `originalUriBaseIds.ROOTPATH.uri` to the JSON report file's own path instead of the repo root, which would break file/line links for any real findings. A `jq` step now patches `ROOTPATH` to `$GITHUB_WORKSPACE` after conversion.
