@@ -1,0 +1,45 @@
+name: CodeQL Advanced
+
+on:
+  workflow_call:
+    inputs:
+      languages:
+        description: >
+          JSON matrix object of language/build-mode pairs to analyze. Supported languages: actions, c-cpp, csharp, go, java-kotlin, javascript-typescript, python, ruby, rust, swift.
+        required: true
+        type: string
+      queries:
+        description: Comma-separated CodeQL query packs to use (security-extended,security-and-quality)
+        required: false
+        type: string
+        default: ""
+      build-command:
+        description: Shell commands to run for languages using build-mode "manual"
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  security-events: write
+  packages: read
+  actions: read
+  contents: read
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ${{ (matrix.language == 'swift' && 'macos-latest') || 'ubuntu-latest' }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(inputs.languages) }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: CodeQL analyze
+        uses: k-3679/reusable-workflows/.github/actions/codeql-analyze@main
+        with:
+          language: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+          queries: ${{ inputs.queries }}
+          build-command: ${{ inputs.build-command }}

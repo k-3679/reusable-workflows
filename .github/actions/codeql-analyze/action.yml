@@ -1,0 +1,43 @@
+name: CodeQL analyze
+description: Initialize CodeQL, optionally build the project, run analysis, and upload SARIF results to the GitHub Security tab.
+
+inputs:
+  language:
+    description: CodeQL language to analyze
+    required: true
+  build-mode:
+    description: CodeQL build mode for the language (none, autobuild, manual)
+    required: true
+  queries:
+    description: Comma-separated CodeQL query packs to use (e.g. security-extended,security-and-quality)
+    required: false
+    default: ""
+  build-command:
+    description: Shell commands to run for languages using build-mode "manual"
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v4
+      with:
+        languages: ${{ inputs.language }}
+        build-mode: ${{ inputs.build-mode }}
+        queries: ${{ inputs.queries }}
+
+    - name: Run manual build steps
+      if: inputs.build-mode == 'manual'
+      shell: bash
+      run: |
+        if [ -z "${{ inputs.build-command }}" ]; then
+          echo "::error::build-mode is 'manual' for '${{ inputs.language }}' but no build-command input was provided."
+          exit 1
+        fi
+        ${{ inputs.build-command }}
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v4
+      with:
+        category: "/language:${{ inputs.language }}"

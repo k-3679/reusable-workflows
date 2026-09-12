@@ -63,7 +63,7 @@ jobs:
       highcrit: ${{ steps.scan.outputs.highcrit }}
       percentage: ${{ steps.scan.outputs.percentage }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.ref }}
           

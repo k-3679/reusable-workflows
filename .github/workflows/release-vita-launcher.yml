@@ -122,7 +122,7 @@ jobs:
       contents: read
       actions: read
       security-events: write
-    uses: k-3679/reusable-workflows/.github/workflows/security-scan.yml@main
+    uses: k-3679/reusable-workflows/.github/workflows/trivy.yml@main
     with:
       ref: ${{ inputs.branch }}
       severity: ${{ inputs.security-severity }}
