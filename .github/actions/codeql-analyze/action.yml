@@ -9,7 +9,7 @@ inputs:
     description: CodeQL build mode for the language (none, autobuild, manual)
     required: true
   queries:
-    description: Comma-separated CodeQL query packs to use (e.g. security-extended,security-and-quality)
+    description: Comma-separated CodeQL query packs to use (ecurity-extended,security-and-quality)
     required: false
     default: ""
   build-command:

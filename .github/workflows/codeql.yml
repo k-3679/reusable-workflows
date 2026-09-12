@@ -5,7 +5,8 @@ on:
     inputs:
       languages:
         description: >
-          JSON matrix object of language/build-mode pairs to analyze. Supported languages: actions, c-cpp, csharp, go, java-kotlin, javascript-typescript, python, ruby, rust, swift.
+          JSON array of language/build-mode pairs to analyze.
+          Supported languages: actions, c-cpp, csharp, go, java-kotlin, javascript-typescript, python, ruby, rust, swift.
         required: true
         type: string
       queries:
@@ -31,7 +32,8 @@ jobs:
     runs-on: ${{ (matrix.language == 'swift' && 'macos-latest') || 'ubuntu-latest' }}
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(inputs.languages) }}
+      matrix:
+        include: ${{ fromJSON(inputs.languages) }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
