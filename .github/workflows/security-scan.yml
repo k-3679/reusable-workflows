@@ -23,6 +23,16 @@ on:
         required: false
         type: string
         default: "0"
+      json-file:
+        description: Path to the JSON output file for the scan results
+        required: false
+        type: string
+        default: "trivy-results.json"
+      sarif-file:
+        description: Path to the SARIF output file for the scan results
+        required: false
+        type: string
+        default: "trivy-results.sarif"
     outputs:
       total:
         description: Total number of findings
@@ -59,3 +69,17 @@ jobs:
           scan-ref: ${{ inputs.scan-ref }}
           severity: ${{ inputs.severity }}
           fail-threshold-percent: ${{ inputs.fail-threshold-percent }}
+          json-file: ${{ inputs.json-file }}
+          sarif-file: ${{ inputs.sarif-file }}
+
+      - name: Upload Trivy report artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-report
+          path: |
+            ${{ inputs.sarif-file }}
+            ${{ inputs.json-file }}
+          retention-days: 3
+
+      

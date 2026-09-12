@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `security-scan.yml` now accepts `json-file` and `sarif-file` inputs and uploads the Trivy scan results as a workflow artifact.
 - Extracted the inline Python in `validate-changelog` and `update-changelog` composite actions into standalone `.py` scripts.
 - `release-vita-launcher.yml` rebases onto the latest `$RELEASE_BRANCH` (with autostash) before committing and pushing.
 - `README.md` Structure section now shows a file tree instead of a bullet list.
