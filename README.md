@@ -1,5 +1,6 @@
 # reusable-workflows
 
+[![CodeQL](https://github.com/k-3679/reusable-workflows/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/k-3679/reusable-workflows/actions/workflows/github-code-scanning/codeql)
 [![Release](https://img.shields.io/github/v/release/k-3679/reusable-workflows)](https://github.com/k-3679/reusable-workflows/releases)
 [![Changelog](https://img.shields.io/badge/changelog-CHANGELOG.md-blue)](CHANGELOG.md)
 

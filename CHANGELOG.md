@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added CodeQL badge in `README.md`.
 - Reusable workflow `codeql.yml` (SAST via CodeQL, converted from the default "Advanced" setup so it can be shared across repos).
 - Reusable workflow `lint.yml`.
 - Reusable workflow `release-vita-launcher.yml`.
