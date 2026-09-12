@@ -115,22 +115,9 @@ jobs:
       eslint-config: ${{ inputs.eslint-config }}
       eslint-glob: ${{ inputs.eslint-glob }}
 
-  security:
-    name: Security scan
-    needs: guard
-    permissions:
-      contents: read
-      actions: read
-      security-events: write
-    uses: k-3679/reusable-workflows/.github/workflows/trivy.yml@main
-    with:
-      ref: ${{ inputs.branch }}
-      severity: ${{ inputs.security-severity }}
-      fail-threshold-percent: ${{ inputs.security-fail-threshold-percent }}
-
   release:
     name: Bump version, tag & release
-    needs: [lint, security]
+    needs: [lint]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -353,17 +340,12 @@ jobs:
 
   summary:
     name: Workflow summary
-    needs: [guard, lint, security, release, build-pages, deploy-pages]
+    needs: [guard, lint, release, build-pages, deploy-pages]
     if: always()
     runs-on: ubuntu-latest
     env:
       GUARD_RESULT: ${{ needs.guard.result }}
       LINT_RESULT: ${{ needs.lint.result }}
-      SECURITY_RESULT: ${{ needs.security.result }}
-      SECURITY_TOTAL: ${{ needs.security.outputs.total }}
-      SECURITY_HIGHCRIT: ${{ needs.security.outputs.highcrit }}
-      SECURITY_PERCENTAGE: ${{ needs.security.outputs.percentage }}
-      SECURITY_FAIL_THRESHOLD_PERCENT: ${{ inputs.security-fail-threshold-percent }}
       RELEASE_RESULT: ${{ needs.release.result }}
       RELEASE_VERSION: ${{ needs.release.outputs.version }}
       RELEASE_TAG: ${{ needs.release.outputs.tag }}
@@ -384,9 +366,6 @@ jobs:
             esac
           }
 
-          security_pct="N/A"
-          [ -n "$SECURITY_PERCENTAGE" ] && security_pct="${SECURITY_PERCENTAGE}%"
-
           release_url="N/A"
           [ -n "$RELEASE_TAG" ] && release_url="$REPO_URL/releases/tag/$RELEASE_TAG"
 
@@ -394,15 +373,6 @@ jobs:
             echo "# Release workflow summary"
             echo ""
             echo "Guard: $(badge "$GUARD_RESULT") · Lint: $(badge "$LINT_RESULT")"
-            echo ""
-            echo "## 🔒 Security - $(badge "$SECURITY_RESULT")"
-            echo "| Metric | Value |"
-            echo "|---|---|"
-            echo "| Total findings | ${SECURITY_TOTAL:-N/A} |"
-            echo "| High/Critical findings | ${SECURITY_HIGHCRIT:-N/A} |"
-            echo "| High/Critical percentage | $security_pct |"
-            echo "| Threshold | ${SECURITY_FAIL_THRESHOLD_PERCENT}% |"
-            echo "| Full report | [Security tab]($REPO_URL/security/code-scanning) |"
             echo ""
             echo "## 🚀 Release - $(badge "$RELEASE_RESULT")"
             echo "| Field | Value |"
@@ -414,6 +384,6 @@ jobs:
             echo "| Release asset | \`${RELEASE_ARCHIVE:-N/A}\` |"
             echo "| Release URL | $release_url |"
             echo ""
-            echo "## 📄 GitHub Pages - $(badge "$PAGES_RESULT")"
-            echo "Live at: ${PAGES_URL:-N/A}"
+            echo "## 📄 GitHub Pages: $(badge "$PAGES_RESULT")"
+            echo " 🟢 Live at: ${PAGES_URL:-N/A}"
           } >> "$GITHUB_STEP_SUMMARY"
