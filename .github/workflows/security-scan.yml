@@ -13,6 +13,11 @@ on:
         required: false
         type: string
         default: "."
+      scanners:
+        description: Comma-separated Trivy scanners to run
+        required: false
+        type: string
+        default: "vuln,secret,misconfig"
       severity:
         description: Comma-separated severities to include
         required: false
@@ -67,6 +72,7 @@ jobs:
         uses: k-3679/reusable-workflows/.github/actions/trivy-security-scan@main
         with:
           scan-ref: ${{ inputs.scan-ref }}
+          scanners: ${{ inputs.scanners }}
           severity: ${{ inputs.severity }}
           fail-threshold-percent: ${{ inputs.fail-threshold-percent }}
           json-file: ${{ inputs.json-file }}

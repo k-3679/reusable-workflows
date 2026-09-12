@@ -29,6 +29,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - `security-scan.yml` now accepts `json-file` and `sarif-file` inputs and uploads the Trivy scan results as a workflow artifact.
+- `trivy-security-scan` now enables the `misconfig` scanner by default via a new `scanners` input.
+- `trivy-security-scan` now runs a single `trivy fs` scan (via `aquasecurity/setup-trivy`) and derives the SARIF report with `trivy convert`, instead of running `aquasecurity/trivy-action` twice.
+- `trivy-security-scan`'s Security tab SARIF upload now sets `category: trivy-fs`.
 - Extracted the inline Python in `validate-changelog` and `update-changelog` composite actions into standalone `.py` scripts.
 - `release-vita-launcher.yml` rebases onto the latest `$RELEASE_BRANCH` (with autostash) before committing and pushing.
 - `README.md` Structure section now shows a file tree instead of a bullet list.
@@ -40,3 +43,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `trivy-security-scan`: bumped `aquasecurity/trivy-action` from `0.28.0` (tag no longer exists upstream, broke every workflow run) to `v0.36.0`.
 - `trivy-security-scan`: bumped `github/codeql-action/upload-sarif` from `v3` to `v4` (v3 deprecated December 2026).
 - `security-scan.yml` and `release-vita-launcher.yml`: added missing `actions: read` permission, required by `codeql-action/upload-sarif` (was failing with "Resource not accessible by integration").
+- `trivy-security-scan`: authenticate Trivy DB downloads with `GITHUB_TOKEN` to avoid GHCR anonymous pull rate limits.

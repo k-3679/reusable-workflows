@@ -6,6 +6,10 @@ inputs:
     description: Path to scan
     required: false
     default: "."
+  scanners:
+    description: Comma-separated Trivy scanners to run
+    required: false
+    default: "vuln,secret,misconfig"
   severity:
     description: Comma-separated severities to include
     required: false
@@ -37,28 +41,28 @@ outputs:
 runs:
   using: composite
   steps:
-    - name: Run Trivy filesystem scan (SARIF for Security tab)
-      uses: aquasecurity/trivy-action@v0.36.0
+    - name: Install Trivy
+      uses: aquasecurity/setup-trivy@v0.3.1
       with:
-        scan-type: fs
-        scan-ref: ${{ inputs.scan-ref }}
-        format: sarif
-        output: ${{ inputs.sarif-file }}
-        severity: ${{ inputs.severity }}
+        cache: true
 
-    - name: Upload SARIF to GitHub Security tab
+    - name: Run Trivy filesystem scan (JSON)
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      run: |
+        trivy fs --scanners "${{ inputs.scanners }}" --severity "${{ inputs.severity }}" --format json --output "${{ inputs.json-file }}" "${{ inputs.scan-ref }}"
+
+    - name: Convert JSON report to SARIF
+      shell: bash
+      run: |
+        trivy convert --format sarif --output "${{ inputs.sarif-file }}" "${{ inputs.json-file }}"
+
+    - name: Upload filesystem SARIF to GitHub Security tab
       uses: github/codeql-action/upload-sarif@v4
       with:
         sarif_file: ${{ inputs.sarif-file }}
-
-    - name: Run Trivy filesystem scan (JSON for threshold check)
-      uses: aquasecurity/trivy-action@v0.36.0
-      with:
-        scan-type: fs
-        scan-ref: ${{ inputs.scan-ref }}
-        format: json
-        output: ${{ inputs.json-file }}
-        severity: ${{ inputs.severity }}
+        category: trivy-fs
 
     - name: Enforce high/critical findings threshold
       id: threshold
