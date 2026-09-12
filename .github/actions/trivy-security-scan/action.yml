@@ -46,6 +46,13 @@ runs:
       with:
         cache: true
 
+    - name: Run Trivy filesystem scan (SARIF)
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      run: |
+        trivy fs --scanners "${{ inputs.scanners }}" --severity "${{ inputs.severity }}" --format sarif --output "${{ inputs.sarif-file }}" "${{ inputs.scan-ref }}"
+
     - name: Run Trivy filesystem scan (JSON)
       shell: bash
       env:
@@ -53,27 +60,10 @@ runs:
       run: |
         trivy fs --scanners "${{ inputs.scanners }}" --severity "${{ inputs.severity }}" --format json --output "${{ inputs.json-file }}" "${{ inputs.scan-ref }}"
 
-    - name: Convert JSON report to SARIF
-      shell: bash
-      run: |
-        trivy convert --format sarif --output "${{ inputs.sarif-file }}" "${{ inputs.json-file }}"
-
-    - name: Fix SARIF root path
-      shell: bash
-      env:
-        SARIF_FILE: ${{ inputs.sarif-file }}
-      run: |
-        tmp=$(mktemp)
-        jq --arg root "file://${GITHUB_WORKSPACE}/" \
-          '.runs[]?.originalUriBaseIds.ROOTPATH.uri = $root' \
-          "$SARIF_FILE" > "$tmp"
-        mv "$tmp" "$SARIF_FILE"
-
     - name: Upload filesystem SARIF to GitHub Security tab
       uses: github/codeql-action/upload-sarif@v4
       with:
         sarif_file: ${{ inputs.sarif-file }}
-        category: trivy-fs
 
     - name: Enforce high/critical findings threshold
       id: threshold
