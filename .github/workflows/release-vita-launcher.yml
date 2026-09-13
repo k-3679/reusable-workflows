@@ -133,7 +133,7 @@ jobs:
       checksum: ${{ steps.checksum.outputs.checksum }}
       release: ${{ steps.package.outputs.release }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           ref: ${{ inputs.branch }}
@@ -302,7 +302,7 @@ jobs:
     env:
       WORKING_DIRECTORY: ${{ inputs.working-directory }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.branch }}
 
@@ -317,10 +317,10 @@ jobs:
           cp ./launcher.json pages-demo/
 
       - name: Setup Pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v6
 
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: pages-demo
 
@@ -336,7 +336,7 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
 
   summary:
     name: Workflow summary
