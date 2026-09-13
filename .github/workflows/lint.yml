@@ -62,7 +62,7 @@ jobs:
     if: contains(fromJSON(inputs.linters), 'php')
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: k-3679/reusable-workflows/.github/actions/lint-php@main
         with:
           php-version: ${{ inputs.php-version }}
@@ -73,7 +73,7 @@ jobs:
     if: contains(fromJSON(inputs.linters), 'python')
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: k-3679/reusable-workflows/.github/actions/lint-python@main
         with:
           python-version: ${{ inputs.python-version }}
@@ -84,7 +84,7 @@ jobs:
     if: contains(fromJSON(inputs.linters), 'node')
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: k-3679/reusable-workflows/.github/actions/lint-node@main
         with:
           node-version: ${{ inputs.node-version }}
@@ -96,7 +96,7 @@ jobs:
     if: contains(fromJSON(inputs.linters), 'go')
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: k-3679/reusable-workflows/.github/actions/lint-go@main
         with:
           go-version: ${{ inputs.go-version }}
@@ -107,7 +107,7 @@ jobs:
     if: contains(fromJSON(inputs.linters), 'rust')
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: k-3679/reusable-workflows/.github/actions/lint-rust@main
         with:
           toolchain: ${{ inputs.rust-toolchain }}
@@ -118,7 +118,7 @@ jobs:
     if: contains(fromJSON(inputs.linters), 'c')
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: k-3679/reusable-workflows/.github/actions/lint-c@main
         with:
           path: ${{ inputs.c-path }}
