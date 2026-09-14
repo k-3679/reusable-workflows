@@ -38,8 +38,8 @@ if base_sha:
 
 if head_unreleased.strip() == base_unreleased.strip():
     print(
-        f"::error::The [Unreleased] section in {changelog_file} was not updated by this push "
-        "- add an entry describing your change",
+        f"::error::The [Unreleased] section in {changelog_file} was not updated by this push. "
+        " add an entry describing your change",
         file=sys.stderr,
     )
     sys.exit(1)
