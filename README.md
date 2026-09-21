@@ -36,4 +36,6 @@ Each action has a README in its folder with usage, inputs and what it checks.
 | [`lint-python`](.github/actions/lint-python) | `ruff check` |
 | [`lint-rust`](.github/actions/lint-rust) | `cargo clippy` |
 
+## Changelog
+
 See [CHANGELOG.md](CHANGELOG.md) for release history.
