@@ -1,5 +1,5 @@
 name: Validate changelog
-description: Fail unless the [Unreleased] section of a Keep a Changelog-formatted CHANGELOG.md was updated by this push
+description: Fail unless the [Unreleased] section of a Keep a Changelog-formatted CHANGELOG.md was updated by this push and every entry sits under a valid category (Added, Changed, Deprecated, Removed, Fixed, Security) as a '- ' bullet of at least three words
 
 inputs:
   changelog-file:
