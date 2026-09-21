@@ -48,7 +48,7 @@ runs:
           exit 0
         fi
 
-        # true when no empty unreleased changes and the new changelog was successfully updated
+        # true when no empty unreleased section and the new changelog was successfully updated (new release added)
         updated=$(python3 "$GITHUB_ACTION_PATH/update_changelog.py")
         py_status=$?
         echo "updated=$updated" >> "$GITHUB_OUTPUT"
