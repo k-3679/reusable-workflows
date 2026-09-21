@@ -31,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `validate-changelog` now enforces Keep a Changelog structure in `[Unreleased]`: entries must be `- ` bullets of at least three words, grouped under a known category (`Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Security`) that is neither empty nor duplicated. Errors are reported as file/line annotations.
 - `trivy.yml` now accepts `json-file` and `sarif-file` inputs and uploads the Trivy scan results as a workflow artifact.
 - `trivy-security-scan` now enables the `misconfig` scanner by default via a new `scanners` input.
 - Extracted the inline Python in `validate-changelog` and `update-changelog` composite actions into standalone `.py` scripts.
@@ -43,6 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `validate-changelog`: the `[Unreleased]` body was only terminated by a bracketed `## [` heading, so any following non-bracketed `## ` heading was treated as part of the section.
 - Replaced placeholder `OWNER/reusable-workflows` action references with `k-3679/reusable-workflows` in `lint.yml` and `trivy.yml` (originally named `security-scan.yml`).
 - `release-vita-launcher.yml` now calls `restrict-branch.yml` and `lint.yml` via `k-3679/reusable-workflows@main` instead of local relative paths.
 - `trivy-security-scan`: bumped `aquasecurity/trivy-action` from `0.28.0` (tag no longer exists upstream, broke every workflow run) to `v0.36.0`.
